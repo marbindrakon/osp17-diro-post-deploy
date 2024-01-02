@@ -1,0 +1,275 @@
+heat_template_version: rocky
+description: >
+
+  ### OSP 17.1 hackfest August-2023
+
+  # greg.procunier@redhat.com
+
+  Initialize the following compute flavors
+
+  g1 | s1 | b1 = gold / silver / bronze performance domains
+
+  5000 | 3333 | 1667 cgroup shares
+
+  
+    flavor    cpu    ram
+    
+   --------- ----- ------
+
+  | small   |  2  |  2gb |
+
+  | medium  |  2  |  4gb |
+
+  | large   |  2  |  8gb |
+
+  | xlarge  |  4  | 16gb |
+
+  | 2xlarge |  8  | 16gb |
+
+   --------- ----- ------
+
+  # hw:vif_multiqueue_enable appears to not be present in wallaby
+
+
+resources:
+
+  flavor-g1.small:
+    type: OS::Nova::Flavor
+    properties:
+      name: g1.small
+      disk: 40
+      ram: 2048
+      vcpus: 2
+      is_public: "true"
+      extra_specs:
+        hw:cpu_policy: shared
+        hw:mem_page_size: large
+        quota:cpu_shares: 512
+        hw_rng:allowed: "true"
+        hw_rng:rate_bytes: 2000
+        hw_rng:rate_period: 2000
+        
+  flavor-g1.medium:
+    type: OS::Nova::Flavor
+    properties:
+      name: g1.medium
+      disk: 40
+      ram: 4096
+      vcpus: 2
+      is_public: "true"
+      extra_specs:
+        hw:cpu_policy: shared
+        hw:mem_page_size: large
+        quota:cpu_shares: 512
+        hw_rng:allowed: "true"
+        hw_rng:rate_bytes: 2000
+        hw_rng:rate_period: 2000
+
+  flavor-g1.large:
+    type: OS::Nova::Flavor
+    properties:
+      name: g1.large
+      disk: 40
+      ram: 8192
+      vcpus: 2
+      is_public: "true"
+      extra_specs:
+        hw:cpu_policy: shared
+        hw:mem_page_size: large
+        quota:cpu_shares: 512
+        hw_rng:allowed: "true"
+        hw_rng:rate_bytes: 2000
+        hw_rng:rate_period: 2000
+
+  flavor-g1.xlarge:
+    type: OS::Nova::Flavor
+    properties:
+      name: g1.xlarge
+      disk: 40
+      ram: 16384
+      vcpus: 4
+      is_public: "true"
+      extra_specs:
+        hw:cpu_policy: shared
+        hw:mem_page_size: large
+        quota:cpu_shares: 512
+        hw_rng:allowed: "true"
+        hw_rng:rate_bytes: 2000
+        hw_rng:rate_period: 2000
+
+  flavor-g1.2xlarge:
+    type: OS::Nova::Flavor
+    properties:
+      name: g1.2xlarge
+      disk: 40
+      ram: 16384
+      vcpus: 8
+      is_public: "true"
+      extra_specs:
+        hw:cpu_policy: shared
+        hw:mem_page_size: large
+        quota:cpu_shares: 512
+        hw_rng:allowed: "true"
+        hw_rng:rate_bytes: 2000
+        hw_rng:rate_period: 2000
+
+  flavor-s1.small:
+    type: OS::Nova::Flavor
+    properties:
+      name: s1.small
+      disk: 40
+      ram: 2048
+      vcpus: 2
+      is_public: "true"
+      extra_specs:
+        hw:cpu_policy: shared
+        hw:mem_page_size: large
+        quota:cpu_shares: 308
+        hw_rng:allowed: "true"
+        hw_rng:rate_bytes: 2000
+        hw_rng:rate_period: 2000
+        
+  flavor-s1.medium:
+    type: OS::Nova::Flavor
+    properties:
+      name: s1.medium
+      disk: 40
+      ram: 4096
+      vcpus: 2
+      is_public: "true"
+      extra_specs:
+        hw:cpu_policy: shared
+        hw:mem_page_size: large
+        quota:cpu_shares: 308
+        hw_rng:allowed: "true"
+        hw_rng:rate_bytes: 2000
+        hw_rng:rate_period: 2000
+
+  flavor-s1.large:
+    type: OS::Nova::Flavor
+    properties:
+      name: s1.large
+      disk: 40
+      ram: 8192
+      vcpus: 2
+      is_public: "true"
+      extra_specs:
+        hw:cpu_policy: shared
+        hw:mem_page_size: large
+        quota:cpu_shares: 308
+        hw_rng:allowed: "true"
+        hw_rng:rate_bytes: 2000
+        hw_rng:rate_period: 2000
+
+  flavor-s1.xlarge:
+    type: OS::Nova::Flavor
+    properties:
+      name: s1.xlarge
+      disk: 40
+      ram: 16384
+      vcpus: 4
+      is_public: "true"
+      extra_specs:
+        hw:cpu_policy: shared
+        hw:mem_page_size: large
+        quota:cpu_shares: 308
+        hw_rng:allowed: "true"
+        hw_rng:rate_bytes: 2000
+        hw_rng:rate_period: 2000
+
+  flavor-s1.2xlarge:
+    type: OS::Nova::Flavor
+    properties:
+      name: s1.2xlarge
+      disk: 40
+      ram: 16384
+      vcpus: 8
+      is_public: "true"
+      extra_specs:
+        hw:cpu_policy: shared
+        hw:mem_page_size: large
+        quota:cpu_shares: 308
+        hw_rng:allowed: "true"
+        hw_rng:rate_bytes: 2000
+        hw_rng:rate_period: 2000
+
+  flavor-b1.small:
+    type: OS::Nova::Flavor
+    properties:
+      name: b1.small
+      disk: 40
+      ram: 2048
+      vcpus: 2
+      is_public: "true"
+      extra_specs:
+        hw:cpu_policy: shared
+        hw:mem_page_size: large
+        quota:cpu_shares: 204
+        hw_rng:allowed: "true"
+        hw_rng:rate_bytes: 2000
+        hw_rng:rate_period: 2000
+        
+  flavor-b1.medium:
+    type: OS::Nova::Flavor
+    properties:
+      name: b1.medium
+      disk: 40
+      ram: 4096
+      vcpus: 2
+      is_public: "true"
+      extra_specs:
+        hw:cpu_policy: shared
+        hw:mem_page_size: large
+        quota:cpu_shares: 204
+        hw_rng:allowed: "true"
+        hw_rng:rate_bytes: 2000
+        hw_rng:rate_period: 2000
+
+  flavor-b1.large:
+    type: OS::Nova::Flavor
+    properties:
+      name: b1.large
+      disk: 40
+      ram: 8192
+      vcpus: 2
+      is_public: "true"
+      extra_specs:
+        hw:cpu_policy: shared
+        hw:mem_page_size: large
+        quota:cpu_shares: 204
+        hw_rng:allowed: "true"
+        hw_rng:rate_bytes: 2000
+        hw_rng:rate_period: 2000
+
+  flavor-b1.xlarge:
+    type: OS::Nova::Flavor
+    properties:
+      name: b1.xlarge
+      disk: 40
+      ram: 16384
+      vcpus: 4
+      is_public: "true"
+      extra_specs:
+        hw:cpu_policy: shared
+        hw:mem_page_size: large
+        quota:cpu_shares: 204
+        hw_rng:allowed: "true"
+        hw_rng:rate_bytes: 2000
+        hw_rng:rate_period: 2000
+
+  flavor-b1.2xlarge:
+    type: OS::Nova::Flavor
+    properties:
+      name: b1.2xlarge
+      disk: 40
+      ram: 16384
+      vcpus: 8
+      is_public: "true"
+      extra_specs:
+        hw:cpu_policy: shared
+        hw:mem_page_size: large
+        quota:cpu_shares: 204
+        hw_rng:allowed: "true"
+        hw_rng:rate_bytes: 2000
+        hw_rng:rate_period: 2000
+

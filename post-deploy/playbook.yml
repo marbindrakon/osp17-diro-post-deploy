@@ -1,0 +1,220 @@
+---
+- name: Fix hugepages mount
+  hosts: Compute
+  become: yes
+  tasks:
+  - name: Copy hugepages mount file
+    ansible.builtin.copy:
+      src: dev-hugepages.mount
+      dest: /etc/systemd/system/dev-hugepages.mount
+    register: copy_result
+
+  - name: reload systemd
+    ansible.builtin.command:
+      cmd: "systemctl daemon-reload"
+    when: copy_result is changed
+
+  - name: remount hugepages
+    ansible.builtin.command:
+      cmd: "systemctl restart dev-hugepages.mount"
+    when: copy_result is changed
+
+- name: Overcloud post-deployment
+  hosts: localhost
+  become: no
+  vars:
+    project_list:
+      - name: admin
+        create: false
+      - name: lab-infra
+        create: true
+      - name: ocp-infra
+        create: true
+    heat_templates:
+      - name: "cgroup-tiered-flavors"
+        template: "./cgroup-tiered-flavors.yaml"
+      - name: "cinder-storage-tiers"
+        template: "./cinder-storage-tiers.yaml"
+
+  tasks:
+  - name: create external network
+    openstack.cloud.network:
+      name: ext-net
+      project: admin
+      external: true
+      shared: true
+      provider_network_type: vlan
+      provider_segmentation_id: 207
+      provider_physical_network: datacentre
+      state: present
+  - name: create external ipv4 subnet
+    openstack.cloud.subnet:
+      name: ext-net-v4
+      network_name: ext-net
+      project: admin
+      state: present
+      ip_version: 4
+      cidr: 172.18.207.0/24
+      gateway_ip: 172.18.207.1
+      enable_dhcp: true
+      dns_nameservers:
+        - 172.18.42.10
+        - 172.18.42.11
+      allocation_pool_start: 172.18.207.10
+      allocation_pool_end: 172.18.207.99
+  - name: create shared nfs network
+    openstack.cloud.network:
+      name: nfs
+      project: admin
+      external: false
+      shared: true
+      mtu: 9000
+      provider_network_type: vlan
+      provider_segmentation_id: 205
+      provider_physical_network: datacentre
+      state: present
+  - name: create nfs ipv4 subnet
+    openstack.cloud.subnet:
+      name: nfs-v4
+      network_name: nfs
+      project: admin
+      state: present
+      ip_version: 4
+      cidr: 172.18.205.0/24
+      enable_dhcp: true
+      allocation_pool_start: 172.18.205.50
+      allocation_pool_end: 172.18.205.200
+
+  - name: create manila share type
+    ansible.builtin.shell:
+      cmd: "openstack share type create default false && touch /home/cloud-admin/.manila-configured"
+      creates: /home/cloud-admin/.manila-configured
+
+  - name: download rhel image
+    ansible.builtin.get_url:
+      dest: /home/cloud-admin/rhel-9.2.qcow2
+      url: https://satellite.lab.signal9.gg/pulp/content/Signal9/Library/content/dist/rhel9/9/x86_64/baseos/iso/rhel-9.2-x86_64-kvm.qcow2
+      validate_certs: false
+
+  - name: convert rhel image
+    ansible.builtin.command:
+      cmd: qemu-img convert -f qcow2 /home/cloud-admin/rhel-9.2.qcow2 -O raw /home/cloud-admin/rhel-9.2.raw
+      creates: /home/cloud-admin/rhel-9.2.raw
+
+  - name: create image
+    openstack.cloud.image:
+      name: rhel-9.2
+      filename: /home/cloud-admin/rhel-9.2.raw
+      disk_format: raw
+      is_public: true
+      project: admin
+      properties:
+        os_type: linux
+        hw_disk_bus: scsi
+        hw_video_model: virtio
+        os_distro: rhel
+        os_version: 9
+        hw_vif_multiqueue: true
+
+  - name: create image with virtio-blk
+    openstack.cloud.image:
+      name: rhel-9.2-virtio-blk
+      filename: /home/cloud-admin/rhel-9.2.raw
+      disk_format: raw
+      is_public: true
+      project: admin
+      properties:
+        os_type: linux
+        os_distro: rhel
+        os_version: 9
+        hw_vif_multiqueue: true
+
+  - name: create projects
+    openstack.cloud.project:
+      name: "{{ item.name }}"
+      domain_id: default
+      state: present
+    loop: "{{ project_list }}"
+    when: item.create == true
+
+  - name: Update quotas
+    openstack.cloud.quota:
+      name: "{{ item.name }}"
+      backup_gigabytes: "-1"
+      backups: "-1"
+      cores: "-1 "
+      fixed_ips: "-1"
+      floating_ips: "-1"
+      floatingip: "-1"
+      gigabytes: "-1"
+      injected_file_size: "-1"
+      injected_files: "-1"
+      injected_path_size: "-1"
+      instances: "-1"
+      key_pairs: "-1"
+      loadbalancer: "-1"
+      metadata_items: "-1"
+      per_volume_gigabytes: "-1"
+      pool: "-1"
+      port: "-1"
+      properties: "-1"
+      ram: "-1"
+      security_group_rule: "-1"
+      security_group: "-1"
+      server_group_members: "-1"
+      server_groups: "-1"
+      snapshots: "-1"
+      volumes: "-1"
+    loop: "{{ project_list }}"
+
+  - name: create federation domain
+    openstack.cloud.identity_domain:
+      name: federation
+    register: domain_output
+
+  - name: create federation idp
+    openstack.cloud.federation_idp:
+      name: signal9
+      domain_id: "{{ domain_output.id }}"
+      remote_ids:
+        - https://login.home.signal9.gg/auth/realms/Signal9-RHT
+
+  - name: create federation mapping
+    openstack.cloud.federation_mapping:
+      name: idm-mapping
+      rules: "{{ lookup('file', 'oidc-mapping.json') | from_json }}"
+
+  - name: create federation protocol
+    openstack.cloud.keystone_federation_protocol:
+      idp_name: signal9
+      mapping_name: idm-mapping
+      name: openid
+
+  - name: create role assignments once
+    ansible.builtin.shell:
+      cmd: |
+        openstack role add --user-domain Default --user admin --domain Default --inherit admin
+        openstack role add --user-domain Default --user admin --domain Default admin
+        openstack role add --user-domain Default --user admin --domain idm --inherit admin
+        openstack role add --user-domain Default --user admin --domain idm admin
+        
+        openstack role add --group-domain idm --group admins --domain Default --inherit admin
+        openstack role add --group-domain idm --group admins --domain Default admin
+        openstack role add --group-domain idm --group admins --domain idm --inherit admin
+        openstack role add --group-domain idm --group admins --domain idm admin
+        touch /home/cloud-admin/.rbac-created
+      creates: /home/cloud-admin/.rbac-created
+
+  - name: create tld restriction once
+    ansible.builtin.shell:
+      cmd: |
+        openstack tld create --name osp2-cloud.lab.signal9.gg
+        touch /home/cloud-admin/.tld-created
+      creates: /home/cloud-admin/.tld-created
+
+  - name: deploy heat templates
+    openstack.cloud.stack:
+      name: "{{ item.name }}"
+      template: "{{ item.template }}"
+      state: present
+    with_items: "{{ heat_templates }}"

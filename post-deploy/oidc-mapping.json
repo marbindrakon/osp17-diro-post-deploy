@@ -1,0 +1,78 @@
+[
+    {
+        "local": [
+                {
+                 "user": {
+                     "name": "{0}",
+		     "type": "local",
+		     "domain": {
+                         "name": "idm"
+		     }
+                 }
+	    }
+        ],
+	"remote": [
+	    {
+		"type": "OIDC-preferred_username"
+            },
+	    {
+		"type": "OIDC-groups",
+		"any_one_of": [
+                    "admins",
+                    "rh-lab-users"
+		]
+	    }
+
+	]
+     },
+     {
+        "local": [
+            {
+                 "user": {
+                     "name": "{0}",
+		     "email": "{1}"
+                 },
+             
+		 "projects":[
+		   {
+	               "name": "{0} Sandbox",
+		       "roles":[
+		         {
+		           "name": "member"
+			 }
+		       ]
+		   }
+		 ] ,
+	         "group": {
+			 "name": "{2}",
+			 "domain": {
+		           "name": "Default"
+			 }
+		 }
+	    }
+        ],
+	"remote": [
+	    {
+		"type": "OIDC-name"
+            },
+	    {
+		"type": "OIDC-email"
+            },
+	    {
+		"type": "OIDC-groups",
+		"whitelist": [
+                    "openstack-users",
+                    "openstack-admins"
+		]
+	    },
+	    {
+		"type": "OIDC-groups",
+		"any_one_of": [
+                    "openstack-users",
+                    "openstack-admins"
+		]
+	    }
+
+	]
+     }
+ ]

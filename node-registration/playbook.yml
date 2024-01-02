@@ -1,0 +1,52 @@
+---
+- name: Register nodes
+  hosts: all
+  become: yes
+  vars:
+    repos:
+      - rhel-9-for-x86_64-baseos-eus-rpms
+      - rhel-9-for-x86_64-appstream-eus-rpms
+      - rhel-9-for-x86_64-highavailability-eus-rpms
+      - openstack-17.1-for-rhel-9-x86_64-rpms
+      - fast-datapath-for-rhel-9-x86_64-rpms
+      - rhceph-6-tools-for-rhel-9-x86_64-rpms
+  tasks:
+    - name: configure for satellite
+      ansible.builtin.dnf:
+        name: "http://satellite.lab.signal9.gg/pub/katello-ca-consumer-latest.noarch.rpm"
+        disable_gpg_check: true
+        state: present
+
+    - name: Register system 
+      redhat_subscription:
+        org_id: Signal9
+        activationkey: EXAMPLE
+        release: 9.2
+
+    - name: Disable all repos 
+      command: "subscription-manager repos --disable *"
+    - name: Enable node repos 
+      command: "subscription-manager repos --enable {{ item }}"
+      with_items: "{{ repos }}"
+
+- name: Install fencing packages for kubevirt
+  hosts: Controller
+  become: yes
+  vars:
+    repos:
+      - rhel-9-for-x86_64-baseos-eus-rpms
+      - rhel-9-for-x86_64-appstream-eus-rpms
+      - rhel-9-for-x86_64-highavailability-eus-rpms
+      - openstack-17.1-for-rhel-9-x86_64-rpms
+      - fast-datapath-for-rhel-9-x86_64-rpms
+      - rhceph-6-tools-for-rhel-9-x86_64-rpms
+  tasks:
+    - name: Install fencing packages
+      ansible.builtin.dnf:
+        name: fence-agents-kubevirt
+        state: present
+
+    - name: run dnf update
+      ansible.builtin.dnf:
+        name: '*'
+        state: latest
