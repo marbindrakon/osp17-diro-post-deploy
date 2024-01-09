@@ -1,0 +1,47 @@
+heat_template_version: wallaby
+description: initialize vlan provider networks for symcorlab
+
+resources:
+
+  symcorlab-provider-net-vlan-33:
+    type: OS::Neutron::ProviderNet
+    properties:
+      name: symcorlab-vlan-33
+      network_type: vlan
+      physical_network: external
+      segmentation_id: 33
+      shared: false
+      port_security_enabled: true
+
+  symcorlab-provider-net-vlan-96:
+    type: OS::Neutron::ProviderNet
+    properties:
+      name: symcorlab-vlan-96
+      network_type: vlan
+      physical_network: external
+      segmentation_id: 96
+      shared: false
+      port_security_enabled: true
+
+  symcorlab-provider-net-vlan-98:
+    type: OS::Neutron::ProviderNet
+    properties:
+      name: symcorlab-vlan-98
+      network_type: vlan
+      physical_network: external
+      segmentation_id: 98
+      shared: false
+      port_security_enabled: true
+      
+  # Do not enable/use OpenStack IPAM in the lab
+  # symcorlab-subnet-vlan-33:
+  #   type: OS::Neutron::Subnet
+  #   properties:
+  #     network: { get_resource: symcorlab-provider-net-vlan-33 }
+  #     cidr: 10.129.33.0/24
+  #     ip_version: 4
+  #     allocation_pools:
+  #       - start: 10.129.33.10
+  #         end: 10.129.33.100
+  #     gateway_ip: 192.168.33.1
+  #     enable_dhcp: true
